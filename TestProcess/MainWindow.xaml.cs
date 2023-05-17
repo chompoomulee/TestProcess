@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.NetworkInformation;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,6 +43,21 @@ namespace TestProcess
             CreateEntry();
             CreateProcess();
         }
+        [DllImport("kernel32.dll")]
+        private static extern bool GenerateConsoleCtrlEvent(ConsoleCtrlEvent sigevent, int dwProcessGroupId);
+
+        [DllImport("kernel32.dll")]
+        private static extern bool AttachConsole(int dwProcessId);
+
+        // Enum to represent the different console control events
+        private enum ConsoleCtrlEvent
+        {
+            CTRL_C = 0,
+            CTRL_BREAK = 1,
+            CTRL_CLOSE = 2,
+            CTRL_LOGOFF = 5,
+            CTRL_SHUTDOWN = 6
+        }
         private void CreateProcess()
         {
             try
@@ -53,35 +69,49 @@ namespace TestProcess
                 process.StartInfo.FileName = "rasdial.exe";
                 process.StartInfo.Arguments = connectionName + " " + username + " " + password;
                 process.StartInfo.RedirectStandardError = true;
+                process.OutputDataReceived += Process_OutputDataReceived;
                 process.Start();
+
                 // Wait for a few seconds (for demonstration purposes).
-                Thread.Sleep(3000);
+                Console.WriteLine("wait 6 seconds!!");
+                Thread.Sleep(6000);
+
+                Console.WriteLine("Begin Output Read Line");
+                process.BeginOutputReadLine();
 
                 // Check if the process has exited.
-                if (!process.HasExited)
-                {
-                    // If the process has not exited, forcefully kill it.
-                    //process.Kill();
+                //if (!process.HasExited)
+                //{
+                //    // If the process has not exited, forcefully kill it.
+                //    //process.Kill();
 
-                    Process processCheck = new Process();
-                    processCheck.StartInfo.RedirectStandardOutput = true;
-                    processCheck.StartInfo.UseShellExecute = false;
-                    processCheck.StartInfo.CreateNoWindow = true;
-                    processCheck.StartInfo.FileName = "rasdial.exe";
-                    processCheck.StartInfo.Arguments = connectionName + " /d"; ;
-                    processCheck.StartInfo.RedirectStandardError = true;
-                    processCheck.Start();
-                    string output = processCheck.StandardOutput.ReadToEnd();
-                }
-                else
-                {
-                    
-                }
+                //    Process processCheck = new Process();
+                //    processCheck.StartInfo.RedirectStandardOutput = true;
+                //    processCheck.StartInfo.UseShellExecute = false;
+                //    processCheck.StartInfo.CreateNoWindow = true;
+                //    processCheck.StartInfo.FileName = "rasdial.exe";
+                //    processCheck.StartInfo.Arguments = connectionName + " /d"; ;
+                //    processCheck.StartInfo.RedirectStandardError = true;
+                //    processCheck.Start();
+                //    string output = processCheck.StandardOutput.ReadToEnd();
+                //}
+                //else
+                //{
+
+                //}
 
             }
             catch (Exception ex)
             {
                 Debug.WriteLine(ex.Message);
+            }
+        }
+        private void Process_OutputDataReceived(object sender, DataReceivedEventArgs e)
+        {
+            if (!string.IsNullOrEmpty(e.Data))
+            {
+                Console.WriteLine("output: " + e.Data);
+                // You can handle/process the output here
             }
         }
         #region RasPhoneBook
